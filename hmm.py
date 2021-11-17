@@ -100,28 +100,48 @@ class Hmm:
             return result
 
         alphaNext = 0.0
-        temp = 0.0
         for j in len(STATUS):
-            temp += alpha(j, t - 1, observations) * self.A[j][i]
-        alphaNext = temp * self.B[i][wordIndex]
+            alphaNext += self.alpha(j, t - 1, observations) * self.A[j][i]
+        alphaNext *= self.B[i][wordIndex]
 
         return alphaNext
 
+    def beta(self, i, t, observations):
+        T = len(observations) - 1
+        if t == T:
+            return 1
+
+        word = observations[t + 1]
+        wordIndex = self.wordToIndex[word]
+        betaPrev = 0.0
+        for j in len(STATUS):
+            betaPrev += self.A[i][j] * self.B[j][wordIndex] * self.beta(j, t + 1, observations)
+        
+        return betaPrev
+
     # 前向算法
     def forward(self, observations):
-        T = len(observations)
+        T = len(observations) - 1
         pO = 0.0
-        for j in len(STATUS):
-            pO += alpha(j, T, observations)
+        for i in len(STATUS):
+            pO += self.alpha(i, T, observations)
         return pO
 
     # 后向算法
-    def backward(self):
-        pass
+    def backward(self, observations):
+        pO = 0.0
+        word = observations[0]
+        wordIndex = self.wordToIndex[word]
+        for i in len(STATUS):
+            pO += self.pi[i] * self.B[i][wordIndex] * self.beta(i, 0, observations)
 
+        return pO
+
+    # 维特比算法
     def viterbi(self):
         pass
 
+    # BW算法
     def baumWelch(self):
         pass
 
