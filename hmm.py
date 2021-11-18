@@ -196,58 +196,68 @@ class Hmm:
     def viterbi(self):
         pass
 
-    # Baum-Welch算法
-    def baumWelch(self, observations, e=0.01):
-        N = len(STATUS)
-        T = len(observations)
-
-        zeta = np.zeros((N, N, T))
-        alp = self.alphav2(observations)
-        bet = self.betav2(observations)
-
-        for t in range(T - 1):
-            word = observations[t + 1]
-            wordIndex = self.wordToIndex[word]
-            denominator = np.dot(np.dot(alp[:, t], self.A) * self.B[:, wordIndex], bet[:, t + 1])
-            for i in range(N):
-                numerator = alp[i, t] * self.A[i, :] * self.B[:, wordIndex] * bet[:, t + 1]
-                zeta[i, :, t] = numerator / denominator   # 这里一个i对应多个j
-        
-        gama = np.sum(zeta, axis=1)
-        finalNumerator = alp[:, T - 1] * bet[:, T - 1].reshape(-1, 1)  # 最后一个时刻
-        final = finalNumerator / np.sum(finalNumerator)
-        gama = np.hstack((gama, final))
-
-        piNew = gama[:, 0]
-        ANew = np.sum(zeta, axis=2) / np.sum(gama[:, :-1], axis=1)
-        BNew = np.copy(self.B)
-        bDemoninator = np.sum(gama, axis=1)
-        tempM = np.zeros((1, T))
-        for k in range(self.B.shape[1]):
-            for t in range(T):
-                wordT = observations[t]
-                wordIndexT = self.wordToIndex[wordT]
-                if wordIndex == k:
-                    tempM[0, t] = 1
-            BNew[:, k] = np.sum(gama * tempM, axis=1) / bDemoninator
-        
-
-        return piNew, ANew, BNew
 
     # 使用Baum-Welch训练迭代
-    def fit(self, trainingList, e=0.01):
-        for epoch in range(10000):
-            for words in trainingList:
-                observations = ''.join(words)
-                piNew, ANew, BNew = self.baumWelch(observations, e)
+    def fit(self, trainingList, e=1e-10):
+        for index, words in enumerate(trainingList):
+            observations = ''.join(words)
+            self.baumWelch(observations)
 
-                pO = self.forwardv2(observations)
-                self.A = ANew
-                self.B = BNew
-                self.pi = piNew
-                pONew = self.forwardv2(observations)
-                print('epoch {}, error: {}'.format(epoch, abs(pO - pONew)))
-                print(' pONew: ', pONew)
 
-            if epoch == 10:
-                break
+    def baumWelch(self, O, e=1E-10):
+        row=self.A.shape[0]
+        col=len(O)
+        
+        done=False
+        epoch = 0
+        while not done:
+            zeta=np.zeros((row,row,col-1))
+            alpha=self.alphav2(O)
+            beta=self.betav2(O)
+            #EM算法：由 E-步骤 和 M-步骤 组成
+            #E-步骤：计算期望值zeta和gamma
+
+            for t in range(col-1):
+                #分母部分
+                word = O[t + 1]
+                wordIndex = self.wordToIndex[word]
+                denominator=np.dot(np.dot(alpha[:,t],self.A)*self.B[:,wordIndex],beta[:,t+1])
+                for i in range(row):
+                    #分子部分以及zeta的值
+                    numerator=alpha[i,t]*self.A[i,:]*self.B[:,wordIndex]*beta[:,t+1]
+                    zeta[i,:,t]=numerator/denominator
+                    
+            gamma=np.sum(zeta,axis=1)
+            final_numerator=(alpha[:,col-1]*beta[:,col-1]).reshape(-1,1)
+            final=final_numerator/np.sum(final_numerator)
+            gamma=np.hstack((gamma,final))
+            #M-步骤：重新估计参数Pi,A,B
+            newPi=gamma[:,0]
+            newA=np.sum(zeta,axis=2)/np.sum(gamma[:,:-1],axis=1)
+            newB=np.copy(self.B)
+            b_denominator=np.sum(gamma,axis=1)
+
+            temp_matrix=np.zeros((1,len(O)))
+            for k in range(self.B.shape[1]):
+                for t in range(len(O)):
+                    wordT = O[t]
+                    wordIndexT = self.wordToIndex[wordT]
+                    if wordIndexT==k:
+                        temp_matrix[0][t]=1
+                newB[:,k]=np.sum(gamma*temp_matrix,axis=1)/b_denominator
+
+            pOld = self.forwardv2(O)
+            self.A=newA
+            self.B=newB
+            self.pi=newPi
+            # print('new pi: ', self.pi)
+            # print('new A: ', self.A)
+            # print('new B: ', self.B)
+            pNew = self.forwardv2(O)
+
+            # print('pNew: ', pNew * 1E10)
+            print('diff: ', (pNew - pOld) * 1E15)
+            
+            epoch += 1
+            if epoch == 1000:
+                done = True

@@ -11,7 +11,7 @@ def loadTrainingData():
         trainingList = list()
         index2Word = list()
         word2Index = dict()
-        for line in file.readlines()[:100]:
+        for line in file.readlines()[:1]:
             words = line.split('  ')
             words = words[:-1]  # 去掉最后的换行符
             if len(words) == 0:
@@ -28,12 +28,13 @@ def loadTrainingData():
     return trainingList, index2Word, word2Index
 
 def observationProbabilityCalculationTest(trainList, index2Word, word2Index):
+    pi = Hmm.getPiExpected(trainList)
     A = Hmm.getAExpected(trainList)
     B = Hmm.getBExpected(trainList, index2Word, word2Index)
-    pi = Hmm.getPiExpected(trainList)
+    print('pi: ', pi) 
     print('A: ', A)
     print('B: ', B)
-    print('pi: ', pi)    
+       
     hmm = Hmm(A, B, pi, word2Index, index2Word)
 
     observation = trainList[3]
@@ -64,21 +65,24 @@ def observationProbabilityCalculationTest(trainList, index2Word, word2Index):
     print(' （后向, 矩阵计算）P(O|λ): {}'.format(pOS))
     print(' （后向, 矩阵计算）计算耗时: {}s'.format(endTime - startTime))
 
+
 def baumWelchTest(trainList, index2Word, word2Index):
-    N = len(STATUS)
-    C = len(index2Word)
-    
-    pi = [1.0 / N] * N
+    # N = len(STATUS)
+    # C = len(index2Word)
+    # pi = [1.0 / N] * N
+    # A = np.full((N, N), 1.0 / N)
+    # B = np.full((N, C), 1.0 / C)
 
-    A = np.full((N, N), 1.0 / N)
-    B = np.full((N, C), 1.0 / C)
-
-    print(A)
-    print(B)
-    print(pi)
+    pi = Hmm.getPiExpected(trainList)
+    A = Hmm.getAExpected(trainList)
+    B = Hmm.getBExpected(trainList, index2Word, word2Index)
+    print('pi: ', pi) 
+    print('A: ', A)
+    print('B: ', B)
 
     hmm = Hmm(A, B, pi, word2Index, index2Word)
     hmm.fit(trainList)
+
 
 if __name__ == '__main__':
     trainList, index2Word, word2Index = loadTrainingData()
