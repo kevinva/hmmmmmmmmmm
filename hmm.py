@@ -1,4 +1,5 @@
 import numpy as np
+import matplotlib.pyplot as plt
 
 STATUS = {0, 1}   # 状态集合，0表示非结尾字，1表示结尾字
 
@@ -201,13 +202,32 @@ class Hmm:
     def fit(self, trainingList, e=1e-10):
         for index, words in enumerate(trainingList):
             observations = ''.join(words)
-            self.baumWelch(observations)
+            lossList, pList = self.baumWelch(observations)
+            
+            labelFont = {'size': 16}   
+
+            # x = range(len(lossList))
+            # plt.figure(figsize=(16, 9))
+            # plt.plot(x, lossList)
+            # plt.xlabel('epoch', labelFont)
+            # plt.ylabel('loss', labelFont)
+            # plt.savefig('./result/pic1.png')
+
+            x = range(len(pList))
+            plt.figure(figsize=(16, 9))
+            plt.plot(x, pList)
+            plt.xlabel('epoch', labelFont)
+            plt.ylabel('P(O|θ)', labelFont)
+            plt.savefig('./result/pic2.png')
 
 
     def baumWelch(self, O, e=1E-10):
         row=self.A.shape[0]
         col=len(O)
         
+        lossList = list()
+        pList = list()
+
         done=False
         epoch = 0
         while not done:
@@ -255,9 +275,11 @@ class Hmm:
             # print('new B: ', self.B)
             pNew = self.forwardv2(O)
 
-            # print('pNew: ', pNew * 1E10)
-            print('diff: ', (pNew - pOld) * 1E15)
-            
+            lossList.append(abs(pNew - pOld))
+            pList.append(pNew)
+
             epoch += 1
             if epoch == 1000:
                 done = True
+
+        return lossList, pList
