@@ -192,11 +192,33 @@ class Hmm:
     def forceCalP(self, observations):
         pass   # hoho_todo
 
-
     # 维特比算法
-    def viterbi(self):
-        pass
+    @staticmethod
+    def viterbi(A, B, pai, O):
+        N = np.shape(A)[0] #HMM状态个数
+        T = np.shape(O)[0] #观测序列的观测个数，即时刻个数
+        delta = np.zeros((T,N)) 
+        psi = np.zeros((T,N)) 
 
+        for t in range(T):
+            if 0 == t: #计算初值
+                delta[t] = np.multiply(pai.reshape((1, N)), np.array(B[:,O[t]]).reshape((1, N)))
+                continue
+            for i in range(N):
+                delta_t_i = np.multiply(delta[t-1], A[:,i])
+                delta_t_i = np.multiply(delta_t_i, B[i, O[t]])
+                delta[t,i] = max(delta_t_i)
+                psi[t][i] = np.argmax(delta_t_i)
+        
+        states = np.zeros((T,), dtype=np.int32)
+        t_range = -1 * np.array(sorted(-1*np.arange(T)))
+        for t in t_range:
+            if T-1 == t:
+                states[t] = np.argmax(delta[t])
+            else:
+                states[t] = psi[t+1, states[t+1]]
+        print('最佳状态序列:', states)
+        return
 
     # 使用Baum-Welch训练迭代
     def fit(self, trainingList, e=1e-10):
@@ -219,7 +241,6 @@ class Hmm:
             plt.xlabel('epoch', labelFont)
             plt.ylabel('P(O|θ)', labelFont)
             plt.savefig('./result/pic2.png')
-
 
     def baumWelch(self, O, e=1E-10):
         row=self.A.shape[0]

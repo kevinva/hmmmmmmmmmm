@@ -3,6 +3,7 @@ import time
 import numpy as np
 from numpy.core.fromnumeric import transpose
 from hmm import STATUS, Hmm
+import math
 
 
 def loadTrainingData():
@@ -95,6 +96,27 @@ def learningProblemTest(trainList, index2Word, word2Index):
     hmm = Hmm(A, B, pi, word2Index, index2Word)
     hmm.fit(trainList)
 
+def decodeProblemTest(trainList, index2Word, word2Index):
+    pi = Hmm.getPiExpected(trainList)
+    A = Hmm.getAExpected(trainList)
+    B = Hmm.getBExpected(trainList, index2Word, word2Index)
+    print('pi: ', pi) 
+    print('A: ', A)
+    print('B: ', B)
+
+    pi = pi.reshape(pi.shape[0], -1)
+
+    observation = trainList[0]
+    sentence = ''.join(observation)
+    seq = np.zeros((1, len(sentence)), dtype=np.int32)
+    for index, word in enumerate(sentence):
+        wordIndex = word2Index[word]
+        seq[0, index] = wordIndex
+    seq = seq.reshape(seq.shape[1], -1)
+    print('观测序列: "{}"'.format(sentence))
+    Hmm.viterbi(A, B, pi, seq)
+
+
 
 if __name__ == '__main__':
     trainList = loadTrainingData()
@@ -104,4 +126,6 @@ if __name__ == '__main__':
     # print(index2Word)
 
     # probabilityEstimationProblemTest(trainList, index2Word, word2Index)
-    learningProblemTest(trainList, index2Word, word2Index)
+    # learningProblemTest(trainList, index2Word, word2Index)
+    decodeProblemTest(trainList, index2Word, word2Index)
+
